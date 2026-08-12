@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GoldStudio, Shorts & Live Battles</title>
+    <!-- SDK SUPABASE -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg: #09090b;
+            --panel: #141419;
+            --card: #1c1c24;
+            --gold: #ffd700;
+            --gold-gradient: linear-gradient(135deg, #ffe066, #f59e0b);
+            --accent: #ff4757;
+            --text: #ffffff;
+            --text-sub: #9ca3af;
+            --border: #272730;
+            --live-red: #ff3838;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding-bottom: 90px; -webkit-tap-highlight-color: transparent; }
+
+        /* Navigation */
+        .header {
+            background: var(--panel);
+            padding: 12px 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo { font-weight: 800; font-size: 1.1rem; color: var(--gold); }
+        .badge-live { background: var(--live-red); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 20px; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        .nav-tabs { display: flex; background: var(--panel); border-bottom: 1px solid var(--border); }
+        .tab-btn { flex: 1; padding: 12px 5px; background: none; border: none; color: var(--text-sub); font-weight: 700; font-size: 0.8rem; cursor: pointer; text-align: center; }
+        .tab-btn.active { color: var(--gold); border-bottom: 2px solid var(--gold); }
+
+        .page { display: none; padding: 15px; }
+        .page.active { display: block; }
+
+        .card { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); }
+        .card-title { font-size: 0.95rem; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
+
+        .input-field { width: 100%; padding: 12px; background: #0f0f14; border: 1px solid var(--border); border-radius: 8px; color: #fff; margin-bottom: 10px; font-size: 0.85rem; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; }
+        .btn-gold { background: var(--gold-gradient); color: #000; }
+        .btn-rec { background: var(--accent); color: #fff; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: #fff; }
+
+        /* SECTION LIVE & BATTLES */
+        .live-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--gold);
+            height: 250px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .video-stream { width: 100%; height: 100%; object-fit: cover; background: #111; }
+        .live-overlay { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--gold); }
+
+        /* GIFTS & DONS LIVE */
+        .gift-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; }
+        .gift-btn { background: var(--card); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; white-space: nowrap; cursor: pointer; }
+
+        /* LECTEUR BOTTOM */
+        .player-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #121217; border-top: 1px solid var(--border);
+            padding: 10px 15px; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">🎙️ GOLDSTUDIO<span style="color:#fff;">PRO</span></div>
+        <div class="badge-live">● EN DIRECT</div>
+    </div>
+
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('studioPage', this)">🎛️ STUDIO</button>
+        <button class="tab-btn" onclick="switchTab('streamPage', this)">🎧 STREAM</button>
+        <button class="tab-btn" onclick="switchTab('livePage', this)">🎥 LIVES & BATTLES</button>
+    </div>
+
+    <!-- TAB 1: STUDIO DAW -->
+    <div id="studioPage" class="page active">
+        <div class="card">
+            <div class="card-title">1. Enregistrement Vocaux</div>
+            <label class="btn btn-outline" style="margin-bottom:8px; display:block; text-align:center;">
+                📂 Charger Beat
+                <input type="file" id="beatInput" accept="audio/*" style="display:none;">
+            </label>
+            <button id="btnRec" class="btn btn-rec">🎙️ Enregistrer Voix (Effet d'Or Gratuit)</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">2. Publication & Dons (Bankily / Masrivi / PayPal)</div>
+            <input type="text" id="trackTitle" class="input-field" placeholder="Titre de la chanson...">
+            <input type="text" id="artistName" class="input-field" placeholder="Nom d'artiste...">
+            <input type="text" id="payBankily" class="input-field" placeholder="Numéro Bankily...">
+            <input type="text" id="payMasrivi" class="input-field" placeholder="Numéro Masrivi...">
+            <input type="text" id="payPaypal" class="input-field" placeholder="Lien PayPal / Wave...">
+            <button id="btnPublish" class="btn btn-gold">☁️ Publier partout</button>
+        </div>
+    </div>
+
+    <!-- TAB 2: STREAMING AUDIO -->
+    <div id="streamPage" class="page">
+        <div class="card">
+            <div class="card-title">🔥 Fil d'actualité Audio</div>
+            <div id="songsList">Chargement des morceaux...</div>
+        </div>
+    </div>
+
+    <!-- TAB 3: LIVES & BATTLES VIRTUELLES -->
+    <div id="livePage" class="page">
+        <div class="live-container">
+            <div class="live-overlay">🔴 BATTLE 1v1 IN LIVE</div>
+            <video id="localVideo" class="video-stream" autoplay playsinline muted></video>
+            <video id="remoteVideo" class="video-stream" autoplay playsinline></video>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <button id="btnStartLive" class="btn btn-gold">🎥 Lancer Mon Live / Concert</button>
+            <button id="btnJoinBattle" class="btn btn-outline">⚔️ Rejoindre Battle</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🎁 Envoyer un Cadeau en Direct (Monétisation)</div>
+            <div class="gift-bar">
+                <button class="gift-btn" onclick="sendGift('👑 Couronne d\'Or', 100)">👑 Couronne (100 MRU)</button>
+                <button class="gift-btn" onclick="sendGift('🔥 Flammes', 50)">🔥 Flammes (50 MRU)</button>
+                <button class="gift-btn" onclick="sendGift('🎤 Micro d\'Or', 200)">🎤 Micro d'Or (200 MRU)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LECTEUR FLOTTANT -->
+    <div class="player-bar">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div id="playerTitle" style="font-size:0.85rem; font-weight:700;">Aucun son</div>
+                <div id="playerArtist" style="font-size:0.75rem; color:var(--text-sub);">Sélectionnez un titre</div>
+            </div>
+            <button id="btnPlayPause" class="btn btn-gold" style="width:36px; height:36px; padding:0; border-radius:50%;">▶</button>
+        </div>
+        <audio id="mainAudio" style="display:none;"></audio>
+    </div>
+
+    <script>
+        // --- CONFIGURATION SUPABASE INTEGRÉE ---
+        const SUPABASE_URL = "https://qdyzecnzzqxuciuvorwr.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkeXplY256enF4dWNpdXZvcndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0ODc0ODYsImV4cCI6MjEwMjA2MzQ4Nn0.360e4ZOHc0DZzXweI-1hG4LzQR0RrfO8e-1Cml6-vb0";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function switchTab(pageId, btn) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            btn.classList.add('active');
+            if(pageId === 'streamPage') loadSongs();
+        }
+
+        // --- GESTION LIVE CAMÉRA ---
+        let localStream;
+        document.getElementById('btnStartLive').addEventListener('click', async () => {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+                alert("🎥 Votre Live est lancé en direct ! Les fans peuvent vous observer et envoyer des cadeaux.");
+            } catch(e) {
+                alert("Erreur Caméra/Micro : " + e.message);
+            }
+        });
+
+        function sendGift(giftName, price) {
+            alert(`🎁 Cadeau envoyé : [${giftName}] d'une valeur de ${price} MRU !\n(Commission prélevée par la plateforme)`);
+        }
+
+        // --- ENREGISTREMENT VOCAL ---
+        let mediaRecorder, chunks = [], vocalBlob;
+        document.getElementById('btnRec').addEventListener('click', async () => {
+            const btn = document.getElementById('btnRec');
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+                    mediaRecorder = new MediaRecorder(stream);
+                    chunks = [];
+                    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                    mediaRecorder.onstop = () => { vocalBlob = new Blob(chunks, { type: 'audio/mp3' }); };
+                    mediaRecorder.start();
+                    btn.innerText = "⏹️ Arrêter Enregistrement";
+                    btn.style.background = "#e17055";
+                } catch(e) {
+                    alert("Accès au microphone refusé : " + e.message);
+                }
+            } else {
+                mediaRecorder.stop();
+                btn.innerText = "🎙️ Enregistrer Voix (Effet d'Or Gratuit)";
+                btn.style.background = "var(--accent)";
+            }
+        });
+
+        // --- PUBLICATION EN LIGNE ---
+        document.getElementById('btnPublish').addEventListener('click', async () => {
+            const title = document.getElementById('trackTitle').value.trim();
+            const artist = document.getElementById('artistName').value.trim();
+            const bankily = document.getElementById('payBankily').value.trim();
+            const masrivi = document.getElementById('payMasrivi').value.trim();
+            const paypal = document.getElementById('payPaypal').value.trim();
+
+            if (!vocalBlob || !title || !artist) {
+                alert("Veuillez renseigner le titre, l'artiste et enregistrer une voix.");
+                return;
+            }
+
+            const btn = document.getElementById('btnPublish');
+            btn.innerText = "⏳ Envoi & Mastering...";
+            btn.disabled = true;
+
+            const fileName = `song_${Date.now()}.mp3`;
+
+            // 1. Upload du fichier vers le bucket 'MUSIC-FILES'
+            const { data: storageData, error: storageError } = await supabase.storage.from('MUSIC-FILES').upload(fileName, vocalBlob);
+
+            if (storageError) {
+                alert("Erreur upload : " + storageError.message);
+                btn.innerText = "☁️ Publier partout";
+                btn.disabled = false;
+                return;
+            }
+
+            const { data: urlData } = supabase.storage.from('MUSIC-FILES').getPublicUrl(fileName);
+
+            // 2. Insertion en BDD
+            const { error: dbError } = await supabase.from('songs').insert([
+                { 
+                    title: title, 
+                    artist: artist, 
+                    audio_url: urlData.publicUrl, 
+                    pay_bankily: bankily, 
+                    pay_masrivi: masrivi, 
+                    pay_paypal: paypal 
+                }
+            ]);
+
+            if (!dbError) {
+                alert("🎉 Morceau publié sur la plateforme !");
+                switchTab('streamPage', document.querySelectorAll('.tab-btn')[1]);
+            } else {
+                alert("Erreur BDD : " + dbError.message);
+            }
+
+            btn.innerText = "☁️ Publier partout";
+            btn.disabled = false;
+        });
+
+        // --- CHARGEMENT DES MORCEAUX ---
+        async function loadSongs() {
+            const list = document.getElementById('songsList');
+            list.innerHTML = "Chargement...";
+            const { data: songs, error } = await supabase.from('songs').select('*').order('id', { ascending: false });
+            
+            if (error || !songs || songs.length === 0) {
+                list.innerHTML = "Aucun titre disponible.";
+                return;
+            }
+
+            list.innerHTML = "";
+            songs.forEach(s => {
+                list.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; background:#0f0f14; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                        <div>
+                            <div style="font-weight:bold; font-size:0.9rem;">${s.title}</div>
+                            <div style="font-size:0.75rem; color:var(--text-sub);">${s.artist}</div>
+                            <div style="font-size:0.7rem; color:var(--gold); margin-top:2px;">
+                                ${s.pay_bankily ? '📱 Bankily ' : ''} ${s.pay_masrivi ? '💳 Masrivi' : ''} ${s.pay_paypal ? '🌐 PayPal' : ''}
+                            </div>
+                        </div>
+                        <button class="btn btn-gold" style="width:auto; padding:6px 12px;" onclick="playAudio('${s.audio_url}', '${s.title.replace(/'/g, "\\'")}', '${s.artist.replace(/'/g, "\\'")}')">▶</button>
+                    </div>
+                `;
+            });
+        }
+
+        // --- LECTEUR AUDIO ---
+        const audio = document.getElementById('mainAudio');
+        const btnPlayPause = document.getElementById('btnPlayPause');
+
+        function playAudio(url, title, artist) {
+            document.getElementById('playerTitle').innerText = title;
+            document.getElementById('playerArtist').innerText = artist;
+            audio.src = url;
+            audio.play();
+            btnPlayPause.innerText = "⏸️";
+        }
+
+        btnPlayPause.addEventListener('click', () => {
+            if (audio.paused && audio.src) {
+                audio.play();
+                btnPlayPause.innerText = "⏸️";
+            } else {
+                audio.pause();
+                btnPlayPause.innerText = "▶";
+            }
+        });
+    </script>
+</body>
+</html>
