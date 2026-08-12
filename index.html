@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GoldStudio, Shorts & Live Battles</title>
-    <!-- SDK SUPABASE -->
+    <!-- CDN SUPABASE JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -71,7 +71,7 @@
 
         /* GIFTS & DONS LIVE */
         .gift-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; }
-        .gift-btn { background: var(--card); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; white-space: nowrap; cursor: pointer; }
+        .gift-btn { background: var(--card); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; white-space: nowrap; cursor: pointer; color: #fff; }
 
         /* LECTEUR BOTTOM */
         .player-bar {
@@ -84,7 +84,7 @@
 <body>
 
     <div class="header">
-        <div class="logo">🎙️ GOLDSTUDIO<span style="color:#fff;">ALL-IN-ONE</span></div>
+        <div class="logo">🎙️ GOLDSTUDIO<span style="color:#fff;"> ALL-IN-ONE</span></div>
         <div class="badge-live">● EN DIRECT</div>
     </div>
 
@@ -160,11 +160,16 @@
     </div>
 
     <script>
-        // --- CONFIGURATION SUPABASE OFFICIELLE ---
+        // --- INITIALISATION SUPABASE SÉCURISÉE ---
         const SUPABASE_URL = "https://qdyzecnzzqxuciuvorwr.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkeXplY256enF4dWNpdXZvcndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0ODc0ODYsImV4cCI6MjEwMjA2MzQ4Nn0.360e4ZOHc0DZzXweI-1hG4LzQR0RrfO8e-1Cml6-vb0";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let dbClient = null;
+        if (window.supabase) {
+            dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
 
+        // --- NAVIGATION ONGLETS ---
         function switchTab(pageId, btn) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -173,108 +178,135 @@
             if(pageId === 'streamPage') loadSongs();
         }
 
-        // --- GESTION LIVE CAMÉRA ---
-        let localStream;
+        // --- ENREGISTREMENT MICROPHONE ---
+        let mediaRecorder, chunks = [], vocalBlob = null;
+        const btnRec = document.getElementById('btnRec');
+
+        btnRec.addEventListener('click', async () => {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert("Votre navigateur mobile ne supporte pas l'enregistrement audio direct.");
+                return;
+            }
+
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    chunks = [];
+                    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                    mediaRecorder.onstop = () => { 
+                        vocalBlob = new Blob(chunks, { type: 'audio/mp3' }); 
+                        alert("🎙️ Enregistrement terminé ! Vous pouvez maintenant publier.");
+                    };
+                    mediaRecorder.start();
+                    btnRec.innerText = "⏹️ Arrêter Enregistrement";
+                    btnRec.style.background = "#e17055";
+                } catch(e) {
+                    alert("Autorisation microphone refusée ou indisponible : " + e.message);
+                }
+            } else {
+                mediaRecorder.stop();
+                btnRec.innerText = "🎙️ Enregistrer Voix (Sans Casque)";
+                btnRec.style.background = "var(--accent)";
+            }
+        });
+
+        // --- CAMERA LIVE ---
         document.getElementById('btnStartLive').addEventListener('click', async () => {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 document.getElementById('localVideo').srcObject = localStream;
-                alert("🎥 Votre Live est lancé en direct ! Les fans peuvent vous observer et envoyer des cadeaux.");
+                alert("🎥 Votre caméra est activée ! Le Live est démarré.");
             } catch(e) {
-                alert("Erreur Caméra/Micro : " + e.message);
+                alert("Impossible d'accéder à la caméra : " + e.message);
             }
         });
 
         function sendGift(giftName, price) {
-            alert(`🎁 Vous avez envoyé [${giftName}] d'une valeur de ${price} MRU !\n(Paiement débité via Bankily/Masrivi)`);
+            alert(`🎁 Cadeau envoyé : [${giftName}] (${price} MRU)`);
         }
 
-        // --- ENREGISTREMENT VOCAL ---
-        let mediaRecorder, chunks = [], vocalBlob;
-        document.getElementById('btnRec').addEventListener('click', async () => {
-            const btn = document.getElementById('btnRec');
-            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-                    mediaRecorder = new MediaRecorder(stream);
-                    chunks = [];
-                    mediaRecorder.ondataavailable = e => chunks.push(e.data);
-                    mediaRecorder.onstop = () => { vocalBlob = new Blob(chunks, { type: 'audio/mp3' }); };
-                    mediaRecorder.start();
-                    btn.innerText = "⏹️ Arrêter Enregistrement";
-                    btn.style.background = "#e17055";
-                } catch(e) {
-                    alert("Accès au microphone refusé : " + e.message);
-                }
-            } else {
-                mediaRecorder.stop();
-                btn.innerText = "🎙️ Enregistrer Voix (Sans Casque)";
-                btn.style.background = "var(--accent)";
-            }
-        });
-
-        // --- PUBLICATION EN LIGNE ---
+        // --- PUBLICATION ET ENVOI ---
         document.getElementById('btnPublish').addEventListener('click', async () => {
             const title = document.getElementById('trackTitle').value.trim();
             const artist = document.getElementById('artistName').value.trim();
             const bankily = document.getElementById('payBankily').value.trim();
             const masrivi = document.getElementById('payMasrivi').value.trim();
-            const paypal = document.getElementById('payPaypal') ? document.getElementById('payPaypal').value.trim() : '';
+            const paypal = document.getElementById('payPaypal').value.trim();
 
-            if (!vocalBlob || !title || !artist) {
-                alert("Veuillez renseigner le titre, l'artiste et enregistrer une voix.");
+            if (!title || !artist) {
+                alert("Veuillez saisir au moins le titre et le nom d'artiste.");
+                return;
+            }
+
+            if (!vocalBlob) {
+                alert("Veuillez d'abord effectuer un enregistrement vocal en appuyant sur le bouton rouge.");
+                return;
+            }
+
+            if (!dbClient) {
+                alert("Erreur de connexion à la base de données.");
                 return;
             }
 
             const btn = document.getElementById('btnPublish');
-            btn.innerText = "⏳ Envoi & Publication...";
+            btn.innerText = "⏳ Envoi en cours...";
             btn.disabled = true;
 
-            const fileName = `song_${Date.now()}.mp3`;
+            try {
+                const fileName = `song_${Date.now()}.mp3`;
 
-            // 1. Upload vers le bucket 'MUSIC-FILES'
-            const { data: storageData, error: storageError } = await supabase.storage.from('MUSIC-FILES').upload(fileName, vocalBlob);
+                // 1. Envoi du fichier audio
+                const { data: storageData, error: storageError } = await dbClient.storage.from('MUSIC-FILES').upload(fileName, vocalBlob);
 
-            if (storageError) {
-                alert("Erreur upload : " + storageError.message);
+                if (storageError) throw storageError;
+
+                const { data: urlData } = dbClient.storage.from('MUSIC-FILES').getPublicUrl(fileName);
+
+                // 2. Enregistrement des données
+                const { error: dbError } = await dbClient.from('songs').insert([
+                    { 
+                        title: title, 
+                        artist: artist, 
+                        audio_url: urlData.publicUrl, 
+                        pay_bankily: bankily, 
+                        pay_masrivi: masrivi, 
+                        pay_paypal: paypal 
+                    }
+                ]);
+
+                if (dbError) throw dbError;
+
+                alert("🎉 Morceau publié avec succès !");
+                switchTab('streamPage', document.querySelectorAll('.tab-btn')[1]);
+
+            } catch (err) {
+                alert("Erreur lors de la publication : " + err.message);
+            } finally {
                 btn.innerText = "🚀 Publier partout";
                 btn.disabled = false;
+            }
+        });
+
+        // --- CHARGEMENT DU STREAM ---
+        async function loadSongs() {
+            const list = document.getElementById('songsList');
+            list.innerHTML = "Chargement des morceaux...";
+
+            if (!dbClient) {
+                list.innerHTML = "Impossible de charger la base de données.";
                 return;
             }
 
-            const { data: urlData } = supabase.storage.from('MUSIC-FILES').getPublicUrl(fileName);
+            const { data: songs, error } = await dbClient.from('songs').select('*').order('id', { ascending: false });
 
-            // 2. Insertion en base de données
-            const { error: dbError } = await supabase.from('songs').insert([
-                { 
-                    title: title, 
-                    artist: artist, 
-                    audio_url: urlData.publicUrl, 
-                    pay_bankily: bankily, 
-                    pay_masrivi: masrivi, 
-                    pay_paypal: paypal 
-                }
-            ]);
-
-            if (!dbError) {
-                alert("🎉 Morceau publié sur la plateforme !");
-                switchTab('streamPage', document.querySelectorAll('.tab-btn')[1]);
-            } else {
-                alert("Erreur BDD : " + dbError.message);
+            if (error) {
+                list.innerHTML = "Erreur de chargement : " + error.message;
+                return;
             }
 
-            btn.innerText = "🚀 Publier partout";
-            btn.disabled = false;
-        });
-
-        // --- CHARGEMENT DES MUSIQUES ---
-        async function loadSongs() {
-            const list = document.getElementById('songsList');
-            list.innerHTML = "Chargement...";
-            const { data: songs, error } = await supabase.from('songs').select('*').order('id', { ascending: false });
-            
-            if (error || !songs || songs.length === 0) {
-                list.innerHTML = "Aucun titre disponible pour le moment.";
+            if (!songs || songs.length === 0) {
+                list.innerHTML = "Aucune chanson disponible pour le moment.";
                 return;
             }
 
@@ -286,7 +318,7 @@
                             <div style="font-weight:bold; font-size:0.9rem;">${s.title}</div>
                             <div style="font-size:0.75rem; color:var(--text-sub);">${s.artist}</div>
                             <div style="font-size:0.7rem; color:var(--gold); margin-top:2px;">
-                                ${s.pay_bankily ? '📱 Bankily ' : ''} ${s.pay_masrivi ? '💳 Masrivi' : ''} ${s.pay_paypal ? '🌐 PayPal' : ''}
+                                ${s.pay_bankily ? '📱 Bankily ' : ''} ${s.pay_masrivi ? '💳 Masrivi' : ''}
                             </div>
                         </div>
                         <button class="btn btn-gold" style="width:auto; padding:6px 12px;" onclick="playAudio('${s.audio_url}', '${s.title.replace(/'/g, "\\'")}', '${s.artist.replace(/'/g, "\\'")}')">▶</button>
