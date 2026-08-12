@@ -84,7 +84,7 @@
 <body>
 
     <div class="header">
-        <div class="logo">🎙️ GOLDSTUDIO<span style="color:#fff;">PRO</span></div>
+        <div class="logo">🎙️ GOLDSTUDIO<span style="color:#fff;">ALL-IN-ONE</span></div>
         <div class="badge-live">● EN DIRECT</div>
     </div>
 
@@ -102,17 +102,17 @@
                 📂 Charger Beat
                 <input type="file" id="beatInput" accept="audio/*" style="display:none;">
             </label>
-            <button id="btnRec" class="btn btn-rec">🎙️ Enregistrer Voix (Effet d'Or Gratuit)</button>
+            <button id="btnRec" class="btn btn-rec">🎙️ Enregistrer Voix (Sans Casque)</button>
         </div>
 
         <div class="card">
             <div class="card-title">2. Publication & Dons (Bankily / Masrivi / PayPal)</div>
-            <input type="text" id="trackTitle" class="input-field" placeholder="Titre de la chanson...">
-            <input type="text" id="artistName" class="input-field" placeholder="Nom d'artiste...">
-            <input type="text" id="payBankily" class="input-field" placeholder="Numéro Bankily...">
-            <input type="text" id="payMasrivi" class="input-field" placeholder="Numéro Masrivi...">
+            <input type="text" id="trackTitle" class="input-field" placeholder="Titre...">
+            <input type="text" id="artistName" class="input-field" placeholder="Artiste...">
+            <input type="text" id="payBankily" class="input-field" placeholder="N° Bankily...">
+            <input type="text" id="payMasrivi" class="input-field" placeholder="N° Masrivi...">
             <input type="text" id="payPaypal" class="input-field" placeholder="Lien PayPal / Wave...">
-            <button id="btnPublish" class="btn btn-gold">☁️ Publier partout</button>
+            <button id="btnPublish" class="btn btn-gold">🚀 Publier partout</button>
         </div>
     </div>
 
@@ -120,7 +120,7 @@
     <div id="streamPage" class="page">
         <div class="card">
             <div class="card-title">🔥 Fil d'actualité Audio</div>
-            <div id="songsList">Chargement des morceaux...</div>
+            <div id="songsList">Chargement...</div>
         </div>
     </div>
 
@@ -160,7 +160,7 @@
     </div>
 
     <script>
-        // --- CONFIGURATION SUPABASE INTEGRÉE ---
+        // --- CONFIGURATION SUPABASE OFFICIELLE ---
         const SUPABASE_URL = "https://qdyzecnzzqxuciuvorwr.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkeXplY256enF4dWNpdXZvcndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0ODc0ODYsImV4cCI6MjEwMjA2MzQ4Nn0.360e4ZOHc0DZzXweI-1hG4LzQR0RrfO8e-1Cml6-vb0";
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -186,7 +186,7 @@
         });
 
         function sendGift(giftName, price) {
-            alert(`🎁 Cadeau envoyé : [${giftName}] d'une valeur de ${price} MRU !\n(Commission prélevée par la plateforme)`);
+            alert(`🎁 Vous avez envoyé [${giftName}] d'une valeur de ${price} MRU !\n(Paiement débité via Bankily/Masrivi)`);
         }
 
         // --- ENREGISTREMENT VOCAL ---
@@ -208,7 +208,7 @@
                 }
             } else {
                 mediaRecorder.stop();
-                btn.innerText = "🎙️ Enregistrer Voix (Effet d'Or Gratuit)";
+                btn.innerText = "🎙️ Enregistrer Voix (Sans Casque)";
                 btn.style.background = "var(--accent)";
             }
         });
@@ -219,7 +219,7 @@
             const artist = document.getElementById('artistName').value.trim();
             const bankily = document.getElementById('payBankily').value.trim();
             const masrivi = document.getElementById('payMasrivi').value.trim();
-            const paypal = document.getElementById('payPaypal').value.trim();
+            const paypal = document.getElementById('payPaypal') ? document.getElementById('payPaypal').value.trim() : '';
 
             if (!vocalBlob || !title || !artist) {
                 alert("Veuillez renseigner le titre, l'artiste et enregistrer une voix.");
@@ -227,24 +227,24 @@
             }
 
             const btn = document.getElementById('btnPublish');
-            btn.innerText = "⏳ Envoi & Mastering...";
+            btn.innerText = "⏳ Envoi & Publication...";
             btn.disabled = true;
 
             const fileName = `song_${Date.now()}.mp3`;
 
-            // 1. Upload du fichier vers le bucket 'MUSIC-FILES'
+            // 1. Upload vers le bucket 'MUSIC-FILES'
             const { data: storageData, error: storageError } = await supabase.storage.from('MUSIC-FILES').upload(fileName, vocalBlob);
 
             if (storageError) {
                 alert("Erreur upload : " + storageError.message);
-                btn.innerText = "☁️ Publier partout";
+                btn.innerText = "🚀 Publier partout";
                 btn.disabled = false;
                 return;
             }
 
             const { data: urlData } = supabase.storage.from('MUSIC-FILES').getPublicUrl(fileName);
 
-            // 2. Insertion en BDD
+            // 2. Insertion en base de données
             const { error: dbError } = await supabase.from('songs').insert([
                 { 
                     title: title, 
@@ -263,18 +263,18 @@
                 alert("Erreur BDD : " + dbError.message);
             }
 
-            btn.innerText = "☁️ Publier partout";
+            btn.innerText = "🚀 Publier partout";
             btn.disabled = false;
         });
 
-        // --- CHARGEMENT DES MORCEAUX ---
+        // --- CHARGEMENT DES MUSIQUES ---
         async function loadSongs() {
             const list = document.getElementById('songsList');
             list.innerHTML = "Chargement...";
             const { data: songs, error } = await supabase.from('songs').select('*').order('id', { ascending: false });
             
             if (error || !songs || songs.length === 0) {
-                list.innerHTML = "Aucun titre disponible.";
+                list.innerHTML = "Aucun titre disponible pour le moment.";
                 return;
             }
 
